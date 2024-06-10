@@ -20,9 +20,26 @@ def gradient_deform(mesh: bmesh.types.BMesh, A: mathutils.Matrix) -> np.ndarray:
     :param A: A 3x3 transformation matrix to apply to the gradients.
     :return: An Nx3 matrix representing new vertex positions for the mesh.
     """
-    verts = numpy_verts(mesh)
     # TODO: Deform the gradients of the mesh and find new vertices.
-    return verts
+    verts = numpy_verts(mesh)
+    faces = numpy_faces(mesh)
+    
+    # Compute the gradient matrix
+    G = compute_gradient_matrix(mesh)
+    
+    # Apply transformation A to the gradients
+    G_transformed = G @ verts @ A.transposed()
+    
+    # Compute the mass and cotangent matrices
+    M = compute_mass_matrix(mesh)
+    C = compute_cotangent_matrix(mesh)
+    
+    # Solve for new vertex positions
+    L = C @ G
+    rhs = M @ G_transformed
+    
+    new_verts = scipy.sparse.linalg.spsolve(L, rhs)
+    return new_verts
 
 
 # !!! This function will be used for automatic grading, don't edit the signature !!!
@@ -45,6 +62,26 @@ def constrained_gradient_deform(
     :param A: A 3x3 transformation matrix to apply to the gradients.
     :return: An Nx3 matrix representing new vertex positions for the mesh.
     """
-    verts = numpy_verts(mesh)
     # TODO: Deform the gradients of the mesh and find new vertices.
-    return verts
+    verts = numpy_verts(mesh)
+    faces = numpy_faces(mesh)
+    
+    # Compute the gradient matrix
+    G = compute_gradient_matrix(mesh)
+    
+    # Apply transformation A only to the selected gradients
+    G_transformed = G.copy()
+    for face_index in selected_face_indices:
+        G_transformed[face_index] = G[face_index] @ A.transposed()
+    
+    # Compute the mass and cotangent matrices
+    M = compute_mass_matrix(mesh)
+    C = compute_cotangent_matrix(mesh)
+    
+    # Solve for new vertex positions
+    L = C @ G
+    rhs = M @ G_transformed
+    
+    new_verts = scipy.sparse.linalg.spsolve(L, rhs)
+
+    return new_verts
