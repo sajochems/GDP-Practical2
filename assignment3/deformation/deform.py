@@ -22,23 +22,21 @@ def gradient_deform(mesh: bmesh.types.BMesh, A: mathutils.Matrix) -> np.ndarray:
     """
     # TODO: Deform the gradients of the mesh and find new vertices.
     verts = numpy_verts(mesh)
-    faces = numpy_faces(mesh)
     
     # Compute the gradient matrix
-    G = compute_gradient_matrix(mesh)
+    G = build_gradient_matrix(mesh)
     
     # Apply transformation A to the gradients
     G_transformed = G @ verts @ A.transposed()
     
     # Compute the mass and cotangent matrices
-    M = compute_mass_matrix(mesh)
-    C = compute_cotangent_matrix(mesh)
+    M, Mv = build_mass_matrices(mesh)
+    C = build_cotangent_matrix(G, Mv)
     
     # Solve for new vertex positions
-    L = C @ G
     rhs = M @ G_transformed
     
-    new_verts = scipy.sparse.linalg.spsolve(L, rhs)
+    new_verts = scipy.sparse.linalg.spsolve(C, rhs)
     return new_verts
 
 
@@ -63,25 +61,22 @@ def constrained_gradient_deform(
     :return: An Nx3 matrix representing new vertex positions for the mesh.
     """
     # TODO: Deform the gradients of the mesh and find new vertices.
-    verts = numpy_verts(mesh)
-    faces = numpy_faces(mesh)
     
     # Compute the gradient matrix
-    G = compute_gradient_matrix(mesh)
+    G = build_gradient_matrix(mesh)
     
     # Apply transformation A only to the selected gradients
     G_transformed = G.copy()
-    for face_index in selected_face_indices:
-        G_transformed[face_index] = G[face_index] @ A.transposed()
+    for i in selected_face_indices:
+        G_transformed[i] = G[i] @ A.T
     
     # Compute the mass and cotangent matrices
-    M = compute_mass_matrix(mesh)
-    C = compute_cotangent_matrix(mesh)
+    M, Mv = build_mass_matrices(mesh)
+    C = build_cotangent_matrix(G, Mv)
     
     # Solve for new vertex positions
-    L = C @ G
     rhs = M @ G_transformed
     
-    new_verts = scipy.sparse.linalg.spsolve(L, rhs)
+    new_verts = scipy.sparse.linalg.spsolve(C, rhs)
 
     return new_verts
