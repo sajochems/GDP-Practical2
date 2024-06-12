@@ -45,7 +45,7 @@ def adjacency_matrix(mesh: bmesh.types.BMesh) -> scipy.sparse.coo_matrix:
     """
     # HINT: Iterating over mesh.edges is significantly faster than iterating over mesh.verts and getting neighbors!
     #       Building a sparse matrix from a set of I, J, V triplets is also faster than adding elements sequentially.
-    # TODO: Create a sparse adjacency matrix using one of the types from scipy.sparse
+
     num_verts = len(mesh.verts)
     rows, cols = [], []
     for edge in mesh.edges:
@@ -73,7 +73,7 @@ def build_combinatorial_laplacian(mesh: bmesh.types.BMesh) -> sparray:
     :param mesh: Mesh to compute the normalized combinatorial Laplacian matrix of.
     :return: A sparse array representing the mesh Laplacian matrix.
     """
-    # TODO: Build the combinatorial laplacian matrix
+
     A = adjacency_matrix(mesh)
     num_verts = A.shape[0]
     degrees = np.array(A.sum(axis=1)).flatten()
@@ -89,6 +89,31 @@ def laplace_smooth():
     pass
 
 
-# TODO Computing the mesh that best matches the modified Laplace coordinates
-def laplace_deform():
-    pass
+def laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: list[int], tau: float) -> np.ndarray:
+    # Step 1: Mark the area to be deformed (vertices of selected faces)
+    selected_verts = set()
+    for face_idx in selected_face_indices:
+        face = mesh.faces[face_idx]
+        for vert in face.verts:
+            selected_verts.add(vert.index)
+    selected_verts = list(selected_verts)
+
+    # Convert mesh vertices to numpy array
+    verts = numpy_verts(mesh)
+
+    # Step 2: Compute the Laplace coordinates
+    L = build_combinatorial_laplacian(mesh)
+    laplace_coords = L @ verts
+
+    # Step 3: Deform the Laplace coordinates (for example, scale them)
+    deformed_laplace_coords = laplace_coords.copy()
+    deformed_laplace_coords[selected_verts] *= tau
+
+    # Step 4: Compute the mesh that best matches the modified Laplace coordinates
+    deformed_verts = scipy.sparse.linalg.spsolve(L, deformed_laplace_coords)
+
+    # Update the mesh vertices with the deformed vertices
+    deformed_mesh = set_verts(mesh, deformed_verts)
+
+    return deformed_mesh
+
