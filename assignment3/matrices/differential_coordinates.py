@@ -58,8 +58,7 @@ def build_gradient_matrix(mesh: bmesh.types.BMesh) -> sparray:
              where M and N are the number of triangles and number of vertices in the mesh, respectively.
     """
     num_faces, num_verts = len(mesh.faces), len(mesh.verts)
-    np.array((3 * num_faces, num_verts))
-
+    
     row = []
     col = []
     data = []
@@ -96,8 +95,6 @@ def build_mass_matrices(mesh: bmesh.types.BMesh) -> tuple[sparray, sparray]:
     """
     num_faces, num_verts = len(mesh.faces), len(mesh.verts)
     # TODO: construct the mass matrices M and Mv for the mesh
-    Mv_data = np.zeros(num_faces * 3)
-
     M_data = np.zeros(num_verts)
     M_row = np.arange(num_verts)
     M_col = np.arange(num_verts)
@@ -121,7 +118,6 @@ def build_mass_matrices(mesh: bmesh.types.BMesh) -> tuple[sparray, sparray]:
     M = coo_array((M_data, (M_row, M_col)), shape=(num_verts, num_verts))
     Mv = coo_array((Mv_data, (Mv_row, Mv_col)), shape=(3 * num_faces, 3 * num_faces))
 
-
     return M, Mv
 
 
@@ -135,7 +131,6 @@ def build_cotangent_matrix(G: sparray, Mv: sparray) -> sparray:
     :return: A 3Mx3M cotangent matrix.
     """
     # TODO: find the cotangent matrix S based on G and Mv
+    S = G.T @ Mv @ G
 
-    C = G.T @ Mv @ G
-
-    return C
+    return S

@@ -25,7 +25,7 @@ def gradient_deform(mesh: bmesh.types.BMesh, A: mathutils.Matrix) -> np.ndarray:
     
     G = build_gradient_matrix(mesh)
     M, Mv = build_mass_matrices(mesh)
-    C = build_cotangent_matrix(G, Mv)
+    S = build_cotangent_matrix(G, Mv)
     
     # Apply transformation A to the gradients
     G_transformed = (G @ verts) @ A.transposed()
@@ -33,7 +33,7 @@ def gradient_deform(mesh: bmesh.types.BMesh, A: mathutils.Matrix) -> np.ndarray:
     # Solve for new vertex positions
     rhs = G.T @ Mv @ G_transformed
     
-    new_verts = scipy.sparse.linalg.spsolve(C, rhs)
+    new_verts = scipy.sparse.linalg.spsolve(S, rhs)
     return new_verts
 
 
@@ -62,7 +62,7 @@ def constrained_gradient_deform(
     # Compute the gradient matrix
     G = build_gradient_matrix(mesh)
     M, Mv = build_mass_matrices(mesh)
-    C = build_cotangent_matrix(G, Mv)
+    S = build_cotangent_matrix(G, Mv)
     
     # Apply transformation A only to the selected gradients
     G_transformed = G.copy()
@@ -70,8 +70,8 @@ def constrained_gradient_deform(
             G_transformed[i] = G[i] @ A.transposed()
     
     # Solve for new vertex positions
-    rhs = Mv @ G_transformed
+    rhs = G.T @ Mv @ G_transformed
     
-    new_verts = scipy.sparse.linalg.spsolve(C, rhs)
+    new_verts = scipy.sparse.linalg.spsolve(S, rhs)
 
     return new_verts
