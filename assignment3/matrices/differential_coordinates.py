@@ -137,6 +137,6 @@ def build_cotangent_matrix(G: sparray, Mv: sparray) -> sparray:
     """
     # TODO: find the cotangent matrix S based on G and Mv
 
-    C = G.T @ Mv @ G
+    S = G.T @ Mv @ G
 
-    return C
+    return S
