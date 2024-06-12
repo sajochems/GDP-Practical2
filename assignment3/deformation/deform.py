@@ -23,15 +23,12 @@ def gradient_deform(mesh: bmesh.types.BMesh, A: mathutils.Matrix) -> np.ndarray:
     # TODO: Deform the gradients of the mesh and find new vertices.
     verts = numpy_verts(mesh)
     
-    # Compute the gradient matrix
     G = build_gradient_matrix(mesh)
-    
-    # Apply transformation A to the gradients
-    G_transformed = G @ verts @ A.transposed()
-    
-    # Compute the mass and cotangent matrices
     M, Mv = build_mass_matrices(mesh)
     C = build_cotangent_matrix(G, Mv)
+    
+    # Apply transformation A to the gradients
+    G_transformed = (G @ verts) @ A.transposed()
     
     # Solve for new vertex positions
     rhs = M @ G_transformed
@@ -64,15 +61,13 @@ def constrained_gradient_deform(
     
     # Compute the gradient matrix
     G = build_gradient_matrix(mesh)
+    M, Mv = build_mass_matrices(mesh)
+    C = build_cotangent_matrix(G, Mv)
     
     # Apply transformation A only to the selected gradients
     G_transformed = G.copy()
     for i in selected_face_indices:
-        G_transformed[i] = G[i] @ A.T
-    
-    # Compute the mass and cotangent matrices
-    M, Mv = build_mass_matrices(mesh)
-    C = build_cotangent_matrix(G, Mv)
+            G_transformed[i] = G[i] @ A.transposed()
     
     # Solve for new vertex positions
     rhs = M @ G_transformed
