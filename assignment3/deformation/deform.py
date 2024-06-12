@@ -31,7 +31,7 @@ def gradient_deform(mesh: bmesh.types.BMesh, A: mathutils.Matrix) -> np.ndarray:
     G_transformed = (G @ verts) @ A.transposed()
     
     # Solve for new vertex positions
-    rhs = M @ G_transformed
+    rhs = G.T @ Mv @ G_transformed
     
     new_verts = scipy.sparse.linalg.spsolve(C, rhs)
     return new_verts
@@ -70,7 +70,7 @@ def constrained_gradient_deform(
             G_transformed[i] = G[i] @ A.transposed()
     
     # Solve for new vertex positions
-    rhs = M @ G_transformed
+    rhs = Mv @ G_transformed
     
     new_verts = scipy.sparse.linalg.spsolve(C, rhs)
 

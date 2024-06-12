@@ -36,7 +36,6 @@ def triangle_gradient(triangle: bmesh.types.BMFace) -> np.ndarray:
     
     edges = [e1, e2, e3]
 
-
     local_gradient[0] = np.cross(normal, edges[0])
     local_gradient[1] = np.cross(normal, edges[1])
     local_gradient[2] = np.cross(normal, edges[2])
