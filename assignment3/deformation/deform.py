@@ -58,6 +58,7 @@ def constrained_gradient_deform(
     :return: An Nx3 matrix representing new vertex positions for the mesh.
     """
     # TODO: Deform the gradients of the mesh and find new vertices.
+    verts = numpy_verts(mesh)
     
     # Compute the gradient matrix
     G = build_gradient_matrix(mesh)
@@ -65,10 +66,20 @@ def constrained_gradient_deform(
     S = build_cotangent_matrix(G, Mv)
     
     # Apply transformation A only to the selected gradients
-    G_transformed = G.copy()
+    G_transformed = G @ verts
+
+    selected_verts = []
+    for i, face in enumerate(mesh.faces):
+        if (i in selected_face_indices):
+                for vert in face.verts:
+                        selected_verts.append(vert.index)
+    selected_verts = selected_verts
+
     for i in selected_face_indices:
-            G_transformed[i] = G[i] @ A.transposed()
+        for j in range(3):
+                G_transformed[i*3 + j] = G_transformed[i*3 + j] @ A.transposed()
     
+
     # Solve for new vertex positions
     rhs = G.T @ Mv @ G_transformed
     
