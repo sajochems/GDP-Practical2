@@ -68,17 +68,9 @@ def constrained_gradient_deform(
     # Apply transformation A only to the selected gradients
     G_transformed = G @ verts
 
-    selected_verts = []
-    for i, face in enumerate(mesh.faces):
-        if (i in selected_face_indices):
-                for vert in face.verts:
-                        selected_verts.append(vert.index)
-    selected_verts = selected_verts
-
     for i in selected_face_indices:
         for j in range(3):
-                G_transformed[i*3 + j] = G_transformed[i*3 + j] @ A.transposed()
-    
+                G_transformed[i*3 + j] = G_transformed[i*3 + j] @ A.transposed()  
 
     # Solve for new vertex positions
     rhs = G.T @ Mv @ G_transformed
