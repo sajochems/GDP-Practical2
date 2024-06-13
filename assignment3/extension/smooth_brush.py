@@ -85,11 +85,11 @@ def build_combinatorial_laplacian(mesh: bmesh.types.BMesh) -> sparray:
 
 
 # TODO: Implement the function below
-def laplace_smooth():
+def laplace_deform(mesh: bmesh.types.BMesh, tau: float) -> np.ndarray:
     pass
 
 
-def laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: list[int], tau: float) -> np.ndarray:
+def constrained_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: list[int], tau: float) -> np.ndarray:
     # Step 1: Mark the area to be deformed (vertices of selected faces)
     selected_verts = set()
     for face_idx in selected_face_indices:
