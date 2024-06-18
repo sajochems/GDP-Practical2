@@ -30,18 +30,18 @@ def triangle_gradient(triangle: bmesh.types.BMFace) -> np.ndarray:
     verts = [v.co for v in triangle.verts]
     v0, v1, v2 = np.array(verts[0]), np.array(verts[1]), np.array(verts[2])
     
-    e1 = v1 - v0
-    e2 = v2 - v1
-    e3 = v0 - v2
+    e0 = np.array(v2 - v1)
+    e1 = np.array(v0 - v2)
+    e2 = np.array(v1 - v0)
     
-    edges = [e1, e2, e3]
+    edges = [e0, e1, e2]
 
-    local_gradient[0] = np.cross(normal, edges[0])
-    local_gradient[1] = np.cross(normal, edges[1])
-    local_gradient[2] = np.cross(normal, edges[2])
+    local_gradient[0] = np.cross(normal, edges[0]) / (2. * area)
+    local_gradient[1] = np.cross(normal, edges[1])/ (2. * area)
+    local_gradient[2] = np.cross(normal, edges[2])/ (2. * area)
 
     # TODO: Find the local gradient for this triangle.
-    return local_gradient / (2 * area)
+    return local_gradient
 
 
 # !!! This function will be used for automatic grading, don't edit the signature !!!
@@ -96,8 +96,8 @@ def build_mass_matrices(mesh: bmesh.types.BMesh) -> tuple[sparray, sparray]:
     num_faces, num_verts = len(mesh.faces), len(mesh.verts)
     # TODO: construct the mass matrices M and Mv for the mesh
     M_data = np.zeros(num_verts)
-    M_row = np.arange(num_verts)
-    M_col = np.arange(num_verts)
+    M_row = []
+    M_col = []
 
     Mv_data = []
     Mv_row = []
@@ -108,6 +108,11 @@ def build_mass_matrices(mesh: bmesh.types.BMesh) -> tuple[sparray, sparray]:
 
         for j, vert in enumerate(face.verts):
             M_data[vert.index] += area / 3
+            if(vert.index not in M_row):
+                M_row.append(vert.index)
+
+            if(vert.index not in M_col):
+                M_col.append(vert.index)
 
             for k in range(3):
                 Mv_data.append(area / 3)
