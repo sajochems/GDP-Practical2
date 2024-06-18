@@ -6,6 +6,7 @@ from assignment3.matrices.util import *
 from assignment3.matrices.differential_coordinates import *
 
 
+
 def numpy_verts(mesh: bmesh.types.BMesh) -> np.ndarray:
     """
     Extracts a numpy array of (x, y, z) vertices from a blender mesh
@@ -57,7 +58,7 @@ def adjacency_matrix(mesh: bmesh.types.BMesh) -> scipy.sparse.coo_matrix:
 
 
 # !!! This function will be used for automatic grading, don't edit the signature !!!
-def build_combinatorial_laplacian(mesh: bmesh.types.BMesh) -> sparray:
+def build_combinatorial_laplacian(mesh: bmesh.types.BMesh) -> scipy.sparse.sparray:
     """
     Computes the normalized combinatorial Laplacian the given mesh.
 
@@ -84,9 +85,25 @@ def build_combinatorial_laplacian(mesh: bmesh.types.BMesh) -> sparray:
     return L
 
 
-# TODO: Implement the function below
+# TODO
 def laplace_deform(mesh: bmesh.types.BMesh, tau: float) -> np.ndarray:
-    pass
+    # Convert mesh vertices to numpy array
+    # verts = numpy_verts(mesh)
+    #
+    # # Step 2: Compute the Laplace coordinates
+    # L = build_combinatorial_laplacian(mesh)
+    # laplace_coords = L @ verts
+    #
+    # # Step 3: Deform the Laplace coordinates (scale them)
+    # deformed_laplace_coords = laplace_coords * tau
+    #
+    # # Step 4: Compute the mesh that best matches the modified Laplace coordinates
+    # deformed_verts = scipy.sparse.linalg.spsolve(L, deformed_laplace_coords)
+    #
+    # return deformed_verts
+    print("WTF??")
+    return iterative_implicit_laplace_smooth(mesh, tau, 1)
+
 
 
 def constrained_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: list[int], tau: float) -> np.ndarray:
@@ -117,3 +134,138 @@ def constrained_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: l
 
     return deformed_mesh
 
+def implicit_laplace_smooth(vertices: np.ndarray, M: scipy.sparse.sparray, S: scipy.sparse.sparray, tau: float) -> np.ndarray:
+    """
+    Performs smoothing of a list of vertices given a combinatorial Laplace matrix and a weight Tau.
+
+    Updates are computed using the laplacian matrix and then weighted by Tau before subtracting from the vertices.
+
+        x = x - tau * L @ x
+
+    :param vertices: Vertices to apply offsets to as an Nx3 numpy array.
+    :param L: The NxN sparse laplacian matrix
+    :param tau: Update weight, tau=0 leaves the vertices unchanged, and tau=1 applies the full update.
+    :return: The new positions of the vertices as an Nx3 numpy array.
+    """
+
+    #TODO
+
+    # L = np.linalg.inv(M) @ S
+    print("YOOOOOOO")
+    for i in range(3):  # Apply smoothing for x, y, z coordinates separately
+        x_i = vertices[:, i]
+        # print("x_i: ", x_i[:100])
+        M_i = M
+        S_i = S
+        MS = M_i + tau * S_i
+        MX = M_i @ x_i
+        x_i1 = scipy.sparse.linalg.spsolve(MS, MX)
+        # print("x_i+1: ", x_i1[:100])
+        print("x_i: ", x_i.shape)
+        print("m_i: ", M_i.shape)
+        print("s_i: ", S_i.shape)
+        print("ms: ", MS.shape)
+        print("mx: ", MX.shape)
+        print("x_i1: ", x_i1.shape)
+        vertices[:, i] = x_i1
+    return vertices
+
+
+def explicit_laplace_smooth(
+        vertices: np.ndarray,
+        L: coo_array,
+        tau: float,
+) -> np.ndarray:
+    """
+    Performs smoothing of a list of vertices given a combinatorial Laplace matrix and a weight Tau.
+
+    Updates are computed using the laplacian matrix and then weighted by Tau before subtracting from the vertices.
+
+        x = x - tau * L @ x
+
+    :param vertices: Vertices to apply offsets to as an Nx3 numpy array.
+    :param L: The NxN sparse laplacian matrix
+    :param tau: Update weight, tau=0 leaves the vertices unchanged, and tau=1 applies the full update.
+    :return: The new positions of the vertices as an Nx3 numpy array.
+    """
+    # TODO: Update the vertices using the combinatorial laplacian matrix L
+    print("TEST")
+    for i in range(3):  # Apply smoothing for x, y, z coordinates separately
+        x = vertices[:, i]
+        vertices[:, i] = x - tau * L @ x
+    return vertices
+
+
+
+def iterative_explicit_laplace_smooth(
+        mesh: bmesh.types.BMesh,
+        tau: float,
+        iterations: int
+) -> bmesh.types.BMesh:
+    """
+    Performs smoothing of a given mesh using the iterative explicit Laplace smoothing.
+
+    First, we define the coordinate vectors and the combinatorial Laplace matrix as numpy arrays.
+    Then, we apply the smoothing operation as many times as iterations.
+    We weight the updating vector in each iteration by tau.
+
+    :param mesh: Mesh to smooth.
+    :param tau: Update weight.
+    :param iterations: Number of smoothing iterations to perform.
+    :return: A mesh with the updated coordinates after smoothing.
+    """
+
+    # Get coordinate vectors as numpy arrays
+    X = numpy_verts(mesh)
+
+    # Compute combinatorial Laplace matrix
+    L = build_combinatorial_laplacian(mesh)
+
+    # Perform smoothing operations
+    for _ in range(iterations):
+        X = explicit_laplace_smooth(X, L, tau)
+
+    # Write smoothed vertices back to output mesh
+    set_verts(mesh, X)
+
+    return mesh
+
+def iterative_implicit_laplace_smooth(
+        mesh: bmesh.types.BMesh,
+        tau: float,
+        iterations: int
+) -> bmesh.types.BMesh:
+    """
+    Performs smoothing of a given mesh using the iterative implicit Laplace smoothing.
+
+    First, we define the coordinate vectors and the combinatorial Laplace matrix as numpy arrays.
+    Then, we apply the smoothing operation as many times as iterations.
+    We weight the updating vector in each iteration by tau.
+
+    :param mesh: Mesh to smooth.
+    :param tau: Update weight.
+    :param iterations: Number of smoothing iterations to perform.
+    :return: A mesh with the updated coordinates after smoothing.
+    """
+
+    print("HUHHHHHH")
+    # Get coordinate vectors as numpy arrays
+    X = numpy_verts(mesh)
+
+    # Compute mass matrix
+    M, Mv = build_mass_matrices(mesh)
+
+    # Compute gradient matrix
+    G = build_gradient_matrix(mesh)
+
+    # Compute cotangent matrix
+    S = build_cotangent_matrix(G, Mv)
+
+    # Perform smoothing operations
+    for _ in range(iterations):
+        X = implicit_laplace_smooth(X, M, S, tau)
+
+    # Write smoothed vertices back to output mesh
+    set_verts(mesh, X)
+
+    return mesh

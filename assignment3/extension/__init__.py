@@ -1,3 +1,4 @@
+import bpy.props
 import mathutils
 
 from .smooth_brush import *
@@ -38,22 +39,21 @@ class LaplaceCoordinateDeformBase(bpy.types.Operator):
         subtype='XYZ_LENGTH',
         default=[1, 1, 1]
     )
+    tau: bpy.props.FloatProperty(
+        name="Tau",
+        description="Weight for the deformation",
+        default=1.0,
+        min=0.0,
+        max=1.0
+    )
 
     # Output parameters
     status: bpy.props.StringProperty(
         name="Smoothing Status", default="Status not set"
     )
 
-    def A(self):
-        if self.matrix_selection_mode == 'ROTATION':
-            self.A_matrix = mathutils.Vector(self.A_rotation).rotation_difference([0, 0, 1]).to_matrix()
-        if self.matrix_selection_mode == 'SCALE':
-            self.A_matrix = mathutils.Matrix([
-                [self.A_scale.x, 0, 0],
-                [0, self.A_scale.y, 0],
-                [0, 0, self.A_scale.z],
-            ])
-        return self.A_matrix
+    def tau(self):
+        return self.tau
 
     @classmethod
     def poll(cls, context):
@@ -71,13 +71,7 @@ class LaplaceCoordinateDeformBase(bpy.types.Operator):
         row.prop(context.view_layer.objects, 'active', text="", expand=True, emboss=False)
         layout.separator()
 
-        layout.prop(self, 'matrix_selection_mode')
-        if self.matrix_selection_mode == 'CUSTOM':
-            layout.prop(self, 'A_matrix', text='')
-        elif self.matrix_selection_mode == 'ROTATION':
-            layout.prop(self, 'A_rotation', text='')
-        elif self.matrix_selection_mode == 'SCALE':
-            layout.prop(self, 'A_scale', text='')
+        layout.prop(self, 'tau', text="Tau")
 
         layout.prop(self, 'status', text="Status", emboss=False)
 
@@ -103,8 +97,7 @@ class LaplaceCoordinateDeform(LaplaceCoordinateDeformBase):
         # Apply the deformation
         self.status = f"Computing deformation"
         #TODO TAU
-        new_verts = laplace_deform(mesh, 0.1)
-        set_verts(mesh, new_verts)
+        laplace_deform(mesh, tau=self.tau)
 
         # Write the results back to the underlying mesh
         self.status = f"Updating Mesh"
