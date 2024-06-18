@@ -18,33 +18,20 @@ class LaplaceCoordinateDeformBase(bpy.types.Operator):
             ('SCALE', "Scale (X, Y, Z)", ""),
         ]
     )
-    A_matrix: bpy.props.FloatVectorProperty(
-        name="A (matrix)",
-        description="Gradient Transformation Matrix",
-        size=[3, 3],
-        subtype='MATRIX',
-        default=mathutils.Matrix.Identity(3)
-    )
-    A_rotation: bpy.props.FloatVectorProperty(
-        name="A (rotation)",
-        description="Gradient Transformation by Rotation",
-        size=[3],
-        subtype='DIRECTION',
-        default=[0, 0, 1]
-    )
-    A_scale: bpy.props.FloatVectorProperty(
-        name="A (scale)",
-        description="Gradient Transformation by Scale",
-        size=[3],
-        subtype='XYZ_LENGTH',
-        default=[1, 1, 1]
-    )
+
     tau: bpy.props.FloatProperty(
         name="Tau",
         description="Weight for the deformation",
-        default=1.0,
+        default=0.001,
         min=0.0,
         max=1.0
+    )
+
+    it: bpy.props.IntProperty(
+        name="Iterations",
+        description="Number of iterations",
+        default=1,
+        min=1
     )
 
     # Output parameters
@@ -72,6 +59,7 @@ class LaplaceCoordinateDeformBase(bpy.types.Operator):
         layout.separator()
 
         layout.prop(self, 'tau', text="Tau")
+        layout.prop(self, 'it', text="Iterations")
 
         layout.prop(self, 'status', text="Status", emboss=False)
 
@@ -96,8 +84,8 @@ class LaplaceCoordinateDeform(LaplaceCoordinateDeformBase):
 
         # Apply the deformation
         self.status = f"Computing deformation"
-        #TODO TAU
-        laplace_deform(mesh, tau=self.tau)
+
+        laplace_deform(mesh, tau=self.tau, it=self.it)
 
         # Write the results back to the underlying mesh
         self.status = f"Updating Mesh"
@@ -134,11 +122,11 @@ class ConstrainedLaplaceCoordinateDeform(LaplaceCoordinateDeformBase):
         self.num_selected_faces = len(selected_face_indices)
 
         # Apply the deformation
-        new_verts = constrained_laplace_deform(mesh, selected_face_indices, 0.1)
+        new_verts = constrained_laplace_deform(mesh, selected_face_indices, self.tau, self.it)
 
         # Update the original mesh
         self.status = f"Updating Mesh"
-        set_verts(mesh, new_verts)
+        # set_verts(mesh, new_verts)
         bmesh.update_edit_mesh(active_object.data)
 
         self.status = f"Done"

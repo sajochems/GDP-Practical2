@@ -78,31 +78,15 @@ def build_combinatorial_laplacian(mesh: bmesh.types.BMesh) -> scipy.sparse.sparr
     A = adjacency_matrix(mesh)
     num_verts = A.shape[0]
     degrees = np.array(A.sum(axis=1)).flatten()
-    D = scipy.sparse.diags(degrees, format='coo')
+    # D = scipy.sparse.diags(degrees, format='coo')
     D_inv = scipy.sparse.diags(1.0 / degrees, format='coo')
     I = scipy.sparse.identity(num_verts, format='coo')
     L = I - D_inv @ A
     return L
 
 
-# TODO
-def laplace_deform(mesh: bmesh.types.BMesh, tau: float) -> np.ndarray:
-    # Convert mesh vertices to numpy array
-    # verts = numpy_verts(mesh)
-    #
-    # # Step 2: Compute the Laplace coordinates
-    # L = build_combinatorial_laplacian(mesh)
-    # laplace_coords = L @ verts
-    #
-    # # Step 3: Deform the Laplace coordinates (scale them)
-    # deformed_laplace_coords = laplace_coords * tau
-    #
-    # # Step 4: Compute the mesh that best matches the modified Laplace coordinates
-    # deformed_verts = scipy.sparse.linalg.spsolve(L, deformed_laplace_coords)
-    #
-    # return deformed_verts
-    print("WTF??")
-    return iterative_implicit_laplace_smooth(mesh, tau, 1)
+def laplace_deform(mesh: bmesh.types.BMesh, tau: float, it: int = 1) -> np.ndarray:
+    return iterative_implicit_laplace_smooth(mesh, tau, it)
 
 
 
@@ -151,7 +135,6 @@ def implicit_laplace_smooth(vertices: np.ndarray, M: scipy.sparse.sparray, S: sc
     #TODO
 
     # L = np.linalg.inv(M) @ S
-    print("YOOOOOOO")
     for i in range(3):  # Apply smoothing for x, y, z coordinates separately
         x_i = vertices[:, i]
         # print("x_i: ", x_i[:100])
@@ -161,12 +144,12 @@ def implicit_laplace_smooth(vertices: np.ndarray, M: scipy.sparse.sparray, S: sc
         MX = M_i @ x_i
         x_i1 = scipy.sparse.linalg.spsolve(MS, MX)
         # print("x_i+1: ", x_i1[:100])
-        print("x_i: ", x_i.shape)
-        print("m_i: ", M_i.shape)
-        print("s_i: ", S_i.shape)
-        print("ms: ", MS.shape)
-        print("mx: ", MX.shape)
-        print("x_i1: ", x_i1.shape)
+        # print("x_i: ", x_i.shape)
+        # print("m_i: ", M_i.shape)
+        # print("s_i: ", S_i.shape)
+        # print("ms: ", MS.shape)
+        # print("mx: ", MX.shape)
+        # print("x_i1: ", x_i1.shape)
         vertices[:, i] = x_i1
     return vertices
 
@@ -188,8 +171,6 @@ def explicit_laplace_smooth(
     :param tau: Update weight, tau=0 leaves the vertices unchanged, and tau=1 applies the full update.
     :return: The new positions of the vertices as an Nx3 numpy array.
     """
-    # TODO: Update the vertices using the combinatorial laplacian matrix L
-    print("TEST")
     for i in range(3):  # Apply smoothing for x, y, z coordinates separately
         x = vertices[:, i]
         vertices[:, i] = x - tau * L @ x
@@ -248,7 +229,6 @@ def iterative_implicit_laplace_smooth(
     :return: A mesh with the updated coordinates after smoothing.
     """
 
-    print("HUHHHHHH")
     # Get coordinate vectors as numpy arrays
     X = numpy_verts(mesh)
 
@@ -261,9 +241,16 @@ def iterative_implicit_laplace_smooth(
     # Compute cotangent matrix
     S = build_cotangent_matrix(G, Mv)
 
+    # L = scipy.sparse.linalg.inv(M) @ S
+
+    # L2 = build_combinatorial_laplacian(mesh)
+
+    # assert np.allclose(L.toarray(), L2.toarray())
+
     # Perform smoothing operations
     for _ in range(iterations):
         X = implicit_laplace_smooth(X, M, S, tau)
+        # X = explicit_laplace_smooth(X, L, tau)
 
     # Write smoothed vertices back to output mesh
     set_verts(mesh, X)

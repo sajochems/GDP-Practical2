@@ -1,6 +1,6 @@
 import numpy
 import numpy as np
-from scipy.sparse import coo_array, eye_array, sparray
+from scipy.sparse import coo_array, eye_array, sparray, diags
 
 import bpy
 import bmesh
@@ -93,35 +93,23 @@ def build_mass_matrices(mesh: bmesh.types.BMesh) -> tuple[sparray, sparray]:
     :return: A tuple containing the NxN sparse matrix $M$ and the 3Mx3M sparse matrix $Mv$,
              where M and N are the number of triangles and number of vertices in the mesh, respectively.
     """
-    num_faces, num_verts = len(mesh.faces), len(mesh.verts)
+    # num_faces, num_verts = len(mesh.faces), len(mesh.verts)
     # TODO: construct the mass matrices M and Mv for the mesh
+    num_faces, num_verts = len(mesh.faces), len(mesh.verts)
     M_data = np.zeros(num_verts)
-    M_row = []
-    M_col = []
-
-    Mv_data = []
-    Mv_row = []
-    Mv_col = []
+    Mv_data = np.zeros(3 * num_faces)
 
     for i, face in enumerate(mesh.faces):
         area = face.calc_area()
 
-        for j, vert in enumerate(face.verts):
+        for vert in face.verts:
             M_data[vert.index] += area / 3
-            if(vert.index not in M_row):
-                M_row.append(vert.index)
 
-            if(vert.index not in M_col):
-                M_col.append(vert.index)
+        for j in range(3):
+            Mv_data[3 * i + j] = area / 3
 
-            for k in range(3):
-                Mv_data.append(area / 3)
-                Mv_row.append(3 * i + k)
-                Mv_col.append(3 * i + k)
-          
-
-    M = coo_array((M_data, (M_row, M_col)), shape=(num_verts, num_verts))
-    Mv = coo_array((Mv_data, (Mv_row, Mv_col)), shape=(3 * num_faces, 3 * num_faces))
+    M = diags(M_data)
+    Mv = diags(Mv_data)
 
     return M, Mv
 
