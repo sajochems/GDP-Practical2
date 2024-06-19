@@ -88,9 +88,9 @@ def build_combinatorial_laplacian(mesh: bmesh.types.BMesh) -> scipy.sparse.sparr
 
 
 def laplace_deform(mesh: bmesh.types.BMesh, tau: float, it: int = 1) -> np.ndarray:
-    for _ in range(it):
-        bmesh.ops.smooth_laplacian_vert(mesh, verts=list(mesh.verts), lambda_factor=tau, use_x=True, use_y=True, use_z=True)
-    # return iterative_implicit_laplace_smooth(mesh, tau, it)
+    # for _ in range(it):
+        # bmesh.ops.smooth_laplacian_vert(mesh, verts=list(mesh.verts), lambda_factor=tau, use_x=True, use_y=True, use_z=True)
+    return iterative_implicit_laplace_smooth(mesh, tau, it)
 
 
 def constrained_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: list[int], tau: float) -> np.ndarray:
@@ -237,23 +237,46 @@ def iterative_implicit_laplace_smooth(
 
     # Compute mass matrix
     M, Mv = build_mass_matrices(mesh)
+    m_inv = scipy.sparse.linalg.inv(M)
 
     # Compute gradient matrix
     G = build_gradient_matrix(mesh)
 
     # Compute cotangent matrix
-    S = build_cotangent_matrix(G, Mv)
+    # S = build_cotangent_matrix(G, Mv)
+    S = G.T @ Mv @ G
 
-    m_inv = scipy.sparse.linalg.inv(M)
+    # Compute Laplacian matrix
     L = m_inv @ S
 
     L2 = build_combinatorial_laplacian(mesh)
 
+    # u = scipy.sparse.identity(S.shape[0], format='coo')
+    # non = u.T @ S @ u
+
+
+    print("L should be this::")
+    print(L2)
+
     print("L:")
     print(L.toarray())
 
-    print("L2:")
-    print(L2)
+    print("m:")
+    print(M.toarray())
+
+    print("m_inv:")
+    print(m_inv.toarray())
+
+    print("G:")
+    print(G.toarray())
+
+    print("Mv:")
+    print(Mv.toarray())
+
+    print("S:")
+    print(S.toarray())
+
+
 
     # assert np.allclose(L.toarray(), L2.toarray())
 
