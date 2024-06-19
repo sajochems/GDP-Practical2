@@ -80,12 +80,16 @@ class LaplaceCoordinateDeform(LaplaceCoordinateDeformBase):
 
         # Gradient deformation expects a triangle mesh
         self.status = f"Ensuring mesh contains only tris"
-        bmesh.ops.triangulate(mesh, faces=mesh.faces)
+        bmesh.ops.triangulate(mesh, faces=list(mesh.faces))
 
         # Apply the deformation
         self.status = f"Computing deformation"
 
+        # bpy.ops.object.mode_set(mode='EDIT')
+
         laplace_deform(mesh, tau=self.tau, it=self.it)
+
+        # bpy.ops.object.mode_set(mode='OBJECT')
 
         # Write the results back to the underlying mesh
         self.status = f"Updating Mesh"

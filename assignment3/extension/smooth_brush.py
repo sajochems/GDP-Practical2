@@ -1,4 +1,6 @@
+import bmesh.ops
 import scipy
+
 
 import mathutils
 
@@ -86,8 +88,9 @@ def build_combinatorial_laplacian(mesh: bmesh.types.BMesh) -> scipy.sparse.sparr
 
 
 def laplace_deform(mesh: bmesh.types.BMesh, tau: float, it: int = 1) -> np.ndarray:
-    return iterative_implicit_laplace_smooth(mesh, tau, it)
-
+    for _ in range(it):
+        bmesh.ops.smooth_laplacian_vert(mesh, verts=list(mesh.verts), lambda_factor=tau, use_x=True, use_y=True, use_z=True)
+    # return iterative_implicit_laplace_smooth(mesh, tau, it)
 
 
 def constrained_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: list[int], tau: float) -> np.ndarray:
@@ -241,16 +244,24 @@ def iterative_implicit_laplace_smooth(
     # Compute cotangent matrix
     S = build_cotangent_matrix(G, Mv)
 
-    # L = scipy.sparse.linalg.inv(M) @ S
+    m_inv = scipy.sparse.linalg.inv(M)
+    L = m_inv @ S
 
-    # L2 = build_combinatorial_laplacian(mesh)
+    L2 = build_combinatorial_laplacian(mesh)
+
+    print("L:")
+    print(L.toarray())
+
+    print("L2:")
+    print(L2)
 
     # assert np.allclose(L.toarray(), L2.toarray())
 
+
     # Perform smoothing operations
     for _ in range(iterations):
-        X = implicit_laplace_smooth(X, M, S, tau)
-        # X = explicit_laplace_smooth(X, L, tau)
+        # X = implicit_laplace_smooth(X, M, S, tau)
+        X = explicit_laplace_smooth(X, L, tau)
 
     # Write smoothed vertices back to output mesh
     set_verts(mesh, X)

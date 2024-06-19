@@ -107,21 +107,17 @@ def build_mass_matrices(mesh: bmesh.types.BMesh) -> tuple[sparray, sparray]:
         area = face.calc_area()
 
         for j, vert in enumerate(face.verts):
-            M_data[vert.index] += area / 3
-            if(vert.index not in M_row):
-                M_row.append(vert.index)
-
-            if(vert.index not in M_col):
-                M_col.append(vert.index)
-
             for k in range(3):
                 Mv_data.append(area / 3)
                 Mv_row.append(3 * i + k)
                 Mv_col.append(3 * i + k)
 
-
-    M = coo_array((M_data, (M_row, M_col)), shape=(num_verts, num_verts))
     Mv = coo_array((Mv_data, (Mv_row, Mv_col)), shape=(3 * num_faces, 3 * num_faces))
+
+    for i, vert in enumerate(mesh.verts):
+        M_data[i] = sum([f.calc_area() for f in vert.link_faces])
+
+    M = diags(M_data, format='csc')
 
     return M, Mv
 
