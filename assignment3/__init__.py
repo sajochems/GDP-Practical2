@@ -17,8 +17,10 @@ bl_info = {
 }
 
 classes = [
-    LaplaceCoordinateDeform,
-    ConstrainedLaplaceCoordinateDeform,
+    ImplicitLaplaceCoordinateDeform,
+    ExplicitLaplaceCoordinateDeform,
+    ImplicitConstrainedLaplaceCoordinateDeform,
+    ExplicitConstrainedLaplaceCoordinateDeform,
     DifferentialCoordinateDeform,
     ConstrainedDifferentialCoordinateDeform,
     # TODO: For task 3, you should add your own Operators, Panels, or other UI elements here!

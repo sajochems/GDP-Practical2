@@ -90,7 +90,7 @@ def laplace_deform(mesh: bmesh.types.BMesh, tau: float, it: int = 1) -> np.ndarr
 
 
 
-def constrained_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: list[int], tau: float) -> np.ndarray:
+def constrained_implicit_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: list[int], tau: float, it: int) -> np.ndarray:
     # Step 1: Mark the area to be deformed (vertices of selected faces)
     selected_verts = set()
     for face_idx in selected_face_indices:
@@ -118,14 +118,14 @@ def constrained_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: l
 
     return deformed_mesh
 
-def constrained_explicit_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: list[int], tau: float, iterations: int) -> bmesh.types.BMesh:
+def constrained_explicit_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: list[int], tau: float, it: int) -> bmesh.types.BMesh:
 
     X = numpy_verts(mesh)
 
     L = build_combinatorial_laplacian(mesh)
 
     X_transformed = X.copy()
-    for _ in range(iterations):
+    for _ in range(it):
         for i in range(3):
             X_transformed[:, i] = X_transformed[:, i] - tau * L @ X_transformed[:, i]
 
@@ -208,7 +208,7 @@ def explicit_laplace_smooth(
 def iterative_explicit_laplace_smooth(
         mesh: bmesh.types.BMesh,
         tau: float,
-        iterations: int
+        it: int
 ) -> bmesh.types.BMesh:
     """
     Performs smoothing of a given mesh using the iterative explicit Laplace smoothing.
@@ -230,7 +230,7 @@ def iterative_explicit_laplace_smooth(
     L = build_combinatorial_laplacian(mesh)
 
     # Perform smoothing operations
-    for _ in range(iterations):
+    for _ in range(it):
         X = explicit_laplace_smooth(X, L, tau)
 
     # Write smoothed vertices back to output mesh
