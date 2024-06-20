@@ -118,6 +118,38 @@ def constrained_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: l
 
     return deformed_mesh
 
+def constrained_explicit_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: list[int], tau: float, iterations: int) -> bmesh.types.BMesh:
+
+    print("hello")
+    # Get coordinate vectors as numpy arrays
+    X = numpy_verts(mesh)
+
+    # Compute combinatorial Laplace matrix
+    L = build_combinatorial_laplacian(mesh)
+
+    X_transformed = X.copy()
+    # Perform smoothing operations
+    for _ in range(iterations):
+        for i in range(3):
+            X_transformed[:, i] = X_transformed[:, i] - tau * L @ X_transformed[:, i]
+
+    selected_verts = set()
+    for i, face in enumerate(mesh.faces):
+        if (i in selected_face_indices):
+            for vert in face.verts:
+                selected_verts.add(vert.index)
+    selected_verts = list(selected_verts)
+
+    X_final = X.copy()
+    for i in selected_verts:
+        X_final[i] = X_transformed[i]
+
+    # Write smoothed vertices back to output mesh
+    set_verts(mesh, X_final)
+
+    return mesh
+
+
 def implicit_laplace_smooth(vertices: np.ndarray, M: scipy.sparse.sparray, S: scipy.sparse.sparray, tau: float) -> np.ndarray:
     """
     Performs smoothing of a list of vertices given a combinatorial Laplace matrix and a weight Tau.

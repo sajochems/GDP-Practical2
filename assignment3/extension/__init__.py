@@ -122,7 +122,7 @@ class ConstrainedLaplaceCoordinateDeform(LaplaceCoordinateDeformBase):
         self.num_selected_faces = len(selected_face_indices)
 
         # Apply the deformation
-        new_verts = constrained_laplace_deform(mesh, selected_face_indices, self.tau, self.it)
+        constrained_explicit_laplace_deform(mesh, selected_face_indices, self.tau, self.it)
 
         # Update the original mesh
         self.status = f"Updating Mesh"
