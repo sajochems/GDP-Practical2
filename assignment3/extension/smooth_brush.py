@@ -2,6 +2,8 @@ import scipy
 
 import mathutils
 
+from scipy.sparse import coo_array, eye_array, sparray, diags
+
 from assignment3.matrices.util import *
 from assignment3.matrices.differential_coordinates import *
 
@@ -145,7 +147,7 @@ def constrained_explicit_laplace_deform(mesh: bmesh.types.BMesh, selected_face_i
     return mesh
 
 
-def implicit_laplace_smooth(vertices: np.ndarray, M: scipy.sparse.sparray, S: scipy.sparse.sparray, tau: float) -> np.ndarray:
+def implicit_laplace_smooth(x: np.ndarray, M: scipy.sparse.sparray, S: scipy.sparse.sparray, tau: float) -> np.ndarray:
     """
     Performs smoothing of a list of vertices given a combinatorial Laplace matrix and a weight Tau.
 
@@ -163,22 +165,13 @@ def implicit_laplace_smooth(vertices: np.ndarray, M: scipy.sparse.sparray, S: sc
 
     # L = np.linalg.inv(M) @ S
     for i in range(3):  # Apply smoothing for x, y, z coordinates separately
-        x_i = vertices[:, i]
-        # print("x_i: ", x_i[:100])
-        M_i = M
-        S_i = S
-        MS = M_i + tau * S_i
-        MX = M_i @ x_i
-        x_i1 = scipy.sparse.linalg.spsolve(MS, MX)
-        # print("x_i+1: ", x_i1[:100])
-        # print("x_i: ", x_i.shape)
-        # print("m_i: ", M_i.shape)
-        # print("s_i: ", S_i.shape)
-        # print("ms: ", MS.shape)
-        # print("mx: ", MX.shape)
-        # print("x_i1: ", x_i1.shape)
-        vertices[:, i] = x_i1
-    return vertices
+        Mi = M.tocsr()
+        Si = S.tocsr()
+        A = Mi + tau * Si
+        b = Mi @ x
+        x = scipy.sparse.linalg.spsolve(A, b)
+
+    return x
 
 
 def explicit_laplace_smooth(
@@ -259,27 +252,58 @@ def iterative_implicit_laplace_smooth(
     # Get coordinate vectors as numpy arrays
     X = numpy_verts(mesh)
 
-    # Compute mass matrix
-    M, Mv = build_mass_matrices(mesh)
-
-    # Compute gradient matrix
-    G = build_gradient_matrix(mesh)
-
-    # Compute cotangent matrix
-    S = build_cotangent_matrix(G, Mv)
-
-    # L = scipy.sparse.linalg.inv(M) @ S
-
-    # L2 = build_combinatorial_laplacian(mesh)
-
-    # assert np.allclose(L.toarray(), L2.toarray())
-
     # Perform smoothing operations
+    result = mesh.copy()
     for _ in range(iterations):
-        X = implicit_laplace_smooth(X, M, S, tau)
-        # X = explicit_laplace_smooth(X, L, tau)
+        M, Mv = build_mass_matrices(mesh)
 
-    # Write smoothed vertices back to output mesh
-    set_verts(mesh, X)
+        G = build_gradient_matrix(mesh)
 
-    return mesh
+        S = other_cotangent(mesh)
+        
+        Xb = X.copy()
+        X = implicit_laplace_smooth(Xb, M, S, tau)
+        result = set_verts(mesh, X)
+
+    return result
+
+def cotangent_weight(v1, v2, v3):
+    """
+    Compute the cotangent weight for edge v1-v2 with the opposite vertex v3.
+    """
+    u = v1 - v2
+    v = v3 - v2
+    cos_theta = np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v))
+    sin_theta = np.sqrt(1 - cos_theta**2)
+    return cos_theta / sin_theta
+
+def other_cotangent(mesh: bmesh.types.BMesh):
+    num_verts = len(mesh.verts)
+    row = []
+    col = []
+    data = []
+
+    for face in mesh.faces:
+        verts = [vert for vert in face.verts]
+        indices = [vert.index for vert in face.verts]
+        for i in range(3):
+            v1, v2, v3 = verts[i], verts[(i + 1) % 3], verts[(i + 2) % 3]
+            idx1, idx2 = indices[i], indices[(i + 1) % 3]
+            weight = cotangent_weight(np.array(v1.co), np.array(v2.co), np.array(v3.co))
+            row.append(idx1)
+            col.append(idx2)
+            data.append(weight)
+            row.append(idx2)
+            col.append(idx1)
+            data.append(weight)
+
+    # Convert the list to a sparse matrix
+    L = coo_array((data, (row, col)), shape=(num_verts, num_verts))
+
+    # Degree matrix (diagonal)
+    D = coo_array((L.sum(axis=1).flatten(), (np.arange(num_verts), np.arange(num_verts))), shape=(num_verts, num_verts))
+
+    # Laplacian matrix
+    S = D - L
+
+    return S

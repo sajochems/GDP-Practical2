@@ -20,7 +20,7 @@ class LaplaceCoordinateDeformBase(bpy.types.Operator):
     tau: bpy.props.FloatProperty(
         name="Tau",
         description="Weight for the deformation",
-        default=0.001,
+        default=0.0001,
         min=0.0,
         max=1.0
     )
