@@ -123,7 +123,7 @@ def build_cotangent_matrix(G: sparray, Mv: sparray) -> sparray:
 
     :param G: A 3MxN gradient matrix.
     :param Mv: A 3Mx3M mass matrix.
-    :return: A 3Mx3M cotangent matrix.
+    :return: A NxN cotangent matrix.
     """
     # TODO: find the cotangent matrix S based on G and Mv
     S = G.T @ Mv @ G

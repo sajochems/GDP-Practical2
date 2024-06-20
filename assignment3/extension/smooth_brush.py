@@ -93,32 +93,38 @@ def laplace_deform(mesh: bmesh.types.BMesh, tau: float, it: int = 1) -> np.ndarr
 
 
 def constrained_implicit_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: list[int], tau: float, it: int) -> np.ndarray:
-    # Step 1: Mark the area to be deformed (vertices of selected faces)
-    selected_verts = set()
-    for face_idx in selected_face_indices:
-        face = mesh.faces[face_idx]
-        for vert in face.verts:
-            selected_verts.add(vert.index)
-    selected_verts = list(selected_verts)
 
     # Convert mesh vertices to numpy array
-    verts = numpy_verts(mesh)
+    X = numpy_verts(mesh)
 
-    # Step 2: Compute the Laplace coordinates
-    L = build_combinatorial_laplacian(mesh)
-    laplace_coords = L @ verts
+    # Perform smoothing operations
+    result = mesh.copy()
+    X_transformed = X.copy()
+    for _ in range(it):
+        M, Mv = build_mass_matrices(result)
 
-    # Step 3: Deform the Laplace coordinates (for example, scale them)
-    deformed_laplace_coords = laplace_coords.copy()
-    deformed_laplace_coords[selected_verts] *= tau
+        #G = build_gradient_matrix(result)
 
-    # Step 4: Compute the mesh that best matches the modified Laplace coordinates
-    deformed_verts = scipy.sparse.linalg.spsolve(L, deformed_laplace_coords)
+        S = other_cotangent(result)
+        
+        Xb = X_transformed.copy()
+        X_transformed = implicit_laplace_smooth(Xb, M, S, tau)
 
-    # Update the mesh vertices with the deformed vertices
-    deformed_mesh = set_verts(mesh, deformed_verts)
+    selected_verts = set()
+    for i, face in enumerate(mesh.faces):
+        if (i in selected_face_indices):
+            for vert in face.verts:
+                selected_verts.add(vert.index)
+    selected_verts = list(selected_verts)
 
-    return deformed_mesh
+    X_final = X.copy()
+    for i in selected_verts:
+        X_final[i] = X_transformed[i]
+
+    result = set_verts(mesh, X_final)
+
+    return result
+
 
 def constrained_explicit_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: list[int], tau: float, it: int) -> bmesh.types.BMesh:
 
@@ -257,7 +263,7 @@ def iterative_implicit_laplace_smooth(
     for _ in range(iterations):
         M, Mv = build_mass_matrices(mesh)
 
-        G = build_gradient_matrix(mesh)
+        #G = build_gradient_matrix(mesh)
 
         S = other_cotangent(mesh)
         
