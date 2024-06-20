@@ -120,14 +120,11 @@ def constrained_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: l
 
 def constrained_explicit_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: list[int], tau: float, iterations: int) -> bmesh.types.BMesh:
 
-    # Get coordinate vectors as numpy arrays
     X = numpy_verts(mesh)
 
-    # Compute combinatorial Laplace matrix
     L = build_combinatorial_laplacian(mesh)
 
     X_transformed = X.copy()
-    # Perform smoothing operations
     for _ in range(iterations):
         for i in range(3):
             X_transformed[:, i] = X_transformed[:, i] - tau * L @ X_transformed[:, i]
@@ -143,7 +140,6 @@ def constrained_explicit_laplace_deform(mesh: bmesh.types.BMesh, selected_face_i
     for i in selected_verts:
         X_final[i] = X_transformed[i]
 
-    # Write smoothed vertices back to output mesh
     set_verts(mesh, X_final)
 
     return mesh
