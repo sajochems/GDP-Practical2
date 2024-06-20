@@ -1,10 +1,8 @@
+import bmesh
 import numpy
 import numpy as np
 import scipy
-from scipy.sparse import coo_array, eye_array, sparray, diags
-
-import bpy
-import bmesh
+from scipy.sparse import coo_array, sparray
 
 
 # !!! This function will be used for automatic grading, don't edit the signature !!!
@@ -30,16 +28,16 @@ def triangle_gradient(triangle: bmesh.types.BMFace) -> np.ndarray:
     area = triangle.calc_area()
     verts = [v.co for v in triangle.verts]
     v0, v1, v2 = np.array(verts[0]), np.array(verts[1]), np.array(verts[2])
-    
+
     e0 = np.array(v2 - v1)
     e1 = np.array(v0 - v2)
     e2 = np.array(v1 - v0)
-    
+
     edges = [e0, e1, e2]
 
     local_gradient[0] = np.cross(normal, edges[0]) / (2. * area)
-    local_gradient[1] = np.cross(normal, edges[1])/ (2. * area)
-    local_gradient[2] = np.cross(normal, edges[2])/ (2. * area)
+    local_gradient[1] = np.cross(normal, edges[1]) / (2. * area)
+    local_gradient[2] = np.cross(normal, edges[2]) / (2. * area)
 
     # TODO: Find the local gradient for this triangle.
     return local_gradient
@@ -111,7 +109,6 @@ def build_mass_matrices(mesh: bmesh.types.BMesh) -> tuple[sparray, sparray]:
     M_diag[M_diag != 0] /= 3.0
     M = scipy.sparse.diags(M_diag)
     Mv = scipy.sparse.diags(Mv_diag)
-
 
     return M, Mv
 

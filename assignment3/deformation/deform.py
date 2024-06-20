@@ -1,9 +1,7 @@
-import scipy
-
 import mathutils
 
-from assignment3.matrices.util import *
 from assignment3.matrices.differential_coordinates import *
+from assignment3.matrices.util import *
 
 
 # !!! This function will be used for automatic grading, don't edit the signature !!!
@@ -22,17 +20,17 @@ def gradient_deform(mesh: bmesh.types.BMesh, A: mathutils.Matrix) -> np.ndarray:
     """
     # TODO: Deform the gradients of the mesh and find new vertices.
     verts = numpy_verts(mesh)
-    
+
     G = build_gradient_matrix(mesh)
     M, Mv = build_mass_matrices(mesh)
     S = build_cotangent_matrix(G, Mv)
-    
+
     # Apply transformation A to the gradients
     G_transformed = (G @ verts) @ A.transposed()
-    
+
     # Solve for new vertex positions
     rhs = G.T @ Mv @ G_transformed
-    
+
     new_verts = scipy.sparse.linalg.spsolve(S, rhs)
     return new_verts
 
@@ -59,22 +57,22 @@ def constrained_gradient_deform(
     """
     # TODO: Deform the gradients of the mesh and find new vertices.
     verts = numpy_verts(mesh)
-    
+
     # Compute the gradient matrix
     G = build_gradient_matrix(mesh)
     M, Mv = build_mass_matrices(mesh)
     S = build_cotangent_matrix(G, Mv)
-    
+
     # Apply transformation A only to the selected gradients
     G_transformed = G @ verts
 
     for i in selected_face_indices:
         for j in range(3):
-                G_transformed[i*3 + j] = G_transformed[i*3 + j] @ A.transposed()  
+            G_transformed[i * 3 + j] = G_transformed[i * 3 + j] @ A.transposed()
 
     # Solve for new vertex positions
     rhs = G.T @ Mv @ G_transformed
-    
+
     new_verts = scipy.sparse.linalg.spsolve(S, rhs)
 
     return new_verts

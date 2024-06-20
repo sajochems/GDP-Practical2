@@ -1,12 +1,11 @@
-import scipy
-
-import mathutils
-
-from scipy.sparse import coo_array, eye_array, sparray, diags
+from scipy.sparse import coo_array
 
 from assignment3.matrices.util import *
 from assignment3.matrices.differential_coordinates import *
+from scipy.sparse import coo_array
 
+from assignment3.matrices.differential_coordinates import *
+from assignment3.matrices.util import *
 
 
 def numpy_verts(mesh: bmesh.types.BMesh) -> np.ndarray:
@@ -91,9 +90,8 @@ def laplace_deform(mesh: bmesh.types.BMesh, tau: float, it: int = 1) -> np.ndarr
     return iterative_implicit_laplace_smooth(mesh, tau, it)
 
 
-
-def constrained_implicit_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: list[int], tau: float, it: int) -> np.ndarray:
-
+def constrained_implicit_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: list[int], tau: float,
+                                        it: int) -> np.ndarray:
     # Convert mesh vertices to numpy array
     X = numpy_verts(mesh)
 
@@ -103,10 +101,13 @@ def constrained_implicit_laplace_deform(mesh: bmesh.types.BMesh, selected_face_i
     for _ in range(it):
         M, Mv = build_mass_matrices(result)
 
-        #G = build_gradient_matrix(result)
+        G = build_gradient_matrix(result)  # currently not used
 
         S = other_cotangent(result)
-        
+
+        # Unfortunately it does not work as expected, but to see what it looks like with the G.T @ Mv @ G cotangent matrix, just uncomment the line below.
+        # S = build_cotangent_matrix(G, Mv)
+
         Xb = X_transformed.copy()
         X_transformed = implicit_laplace_smooth(Xb, M, S, tau)
 
@@ -126,8 +127,8 @@ def constrained_implicit_laplace_deform(mesh: bmesh.types.BMesh, selected_face_i
     return result
 
 
-def constrained_explicit_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: list[int], tau: float, it: int) -> bmesh.types.BMesh:
-
+def constrained_explicit_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: list[int], tau: float,
+                                        it: int) -> bmesh.types.BMesh:
     X = numpy_verts(mesh)
 
     L = build_combinatorial_laplacian(mesh)
@@ -159,23 +160,19 @@ def implicit_laplace_smooth(x: np.ndarray, M: scipy.sparse.sparray, S: scipy.spa
 
     Updates are computed using the laplacian matrix and then weighted by Tau before subtracting from the vertices.
 
-        x = x - tau * L @ x
-
     :param vertices: Vertices to apply offsets to as an Nx3 numpy array.
-    :param L: The NxN sparse laplacian matrix
+    :param M: The sparse mass matrix
+    :param S: The sparse cotangent matrix
     :param tau: Update weight, tau=0 leaves the vertices unchanged, and tau=1 applies the full update.
     :return: The new positions of the vertices as an Nx3 numpy array.
     """
 
-    #TODO
-
-    # L = np.linalg.inv(M) @ S
-    for i in range(3):  # Apply smoothing for x, y, z coordinates separately
-        Mi = M.tocsr()
-        Si = S.tocsr()
-        A = Mi + tau * Si
-        b = Mi @ x
-        x = scipy.sparse.linalg.spsolve(A, b)
+    # Comute the implicit laplace smoothing by solving the linear system (M + tau * S)xi+1 = Mx
+    Mi = M.tocsr()  # convert to csr
+    Si = S.tocsr()  # convert to csr
+    A = Mi + (tau * Si)
+    b = Mi @ x
+    x = scipy.sparse.linalg.spsolve(A, b)
 
     return x
 
@@ -200,8 +197,8 @@ def explicit_laplace_smooth(
     for i in range(3):  # Apply smoothing for x, y, z coordinates separately
         x = vertices[:, i]
         vertices[:, i] = x - tau * L @ x
-    return vertices
 
+    return vertices
 
 
 def iterative_explicit_laplace_smooth(
@@ -237,6 +234,7 @@ def iterative_explicit_laplace_smooth(
 
     return mesh
 
+
 def iterative_implicit_laplace_smooth(
         mesh: bmesh.types.BMesh,
         tau: float,
@@ -263,15 +261,19 @@ def iterative_implicit_laplace_smooth(
     for _ in range(iterations):
         M, Mv = build_mass_matrices(mesh)
 
-        #G = build_gradient_matrix(mesh)
+        G = build_gradient_matrix(mesh)
 
         S = other_cotangent(mesh)
-        
+
+        # Unfortunately it does not work as expected, but to see what it looks like with the G.T @ Mv @ G cotangent matrix, just uncomment the line below.
+        # S = build_cotangent_matrix(G, Mv)
+
         Xb = X.copy()
         X = implicit_laplace_smooth(Xb, M, S, tau)
         result = set_verts(mesh, X)
 
     return result
+
 
 def cotangent_weight(v1, v2, v3):
     """
@@ -280,8 +282,9 @@ def cotangent_weight(v1, v2, v3):
     u = v1 - v2
     v = v3 - v2
     cos_theta = np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v))
-    sin_theta = np.sqrt(1 - cos_theta**2)
+    sin_theta = np.sqrt(1 - cos_theta ** 2)
     return cos_theta / sin_theta
+
 
 def other_cotangent(mesh: bmesh.types.BMesh):
     num_verts = len(mesh.verts)
