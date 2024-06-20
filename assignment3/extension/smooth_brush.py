@@ -120,7 +120,6 @@ def constrained_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: l
 
 def constrained_explicit_laplace_deform(mesh: bmesh.types.BMesh, selected_face_indices: list[int], tau: float, iterations: int) -> bmesh.types.BMesh:
 
-    print("hello")
     # Get coordinate vectors as numpy arrays
     X = numpy_verts(mesh)
 
